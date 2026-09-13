@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>VCOP Booking Studio</title>
+<!-- Supabase JS (optional persistence). App runs fine without it. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --navy:#13293D; --navy-700:#1c3a54; --navy-900:#0e2030;
+  --amber:#C08A2D; --amber-600:#a8781f;
+  --slate:#5B6570; --muted:#8a93a0;
+  --paper:#F7F8FA; --card:#ffffff; --line:#E6E9ED; --line-2:#d7dce2;
+  --ink:#13293D; --white:#fff;
+  --danger:#C0392B; --success:#2E7D5B;
+  --shadow:0 10px 30px rgba(19,41,61,.10);
+  --shadow-lg:0 24px 60px rgba(19,41,61,.18);
+  --radius:16px; --radius-sm:11px;
+  --font:'Poppins','Segoe UI',system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{font-family:var(--font);background:var(--paper);color:var(--ink);line-height:1.55;overflow-x:hidden}
+img{max-width:100%;display:block}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,textarea,select{font-family:inherit;font-size:16px}
+a{color:inherit;text-decoration:none}
+.hidden{display:none !important}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:14px 22px;border-radius:12px;font-weight:600;font-size:15px;transition:.18s;border:1px solid transparent;white-space:nowrap}
+.btn-primary{background:var(--amber);color:#fff;box-shadow:0 6px 18px rgba(192,138,45,.35)}
+.btn-primary:hover{background:var(--amber-600);transform:translateY(-1px)}
+.btn-navy{background:var(--navy);color:#fff}
+.btn-navy:hover{background:var(--navy-700);transform:translateY(-1px)}
+.btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line-2)}
+.btn-ghost:hover{border-color:var(--navy);background:#fff}
+.btn-danger{background:#fff;color:var(--danger);border:1px solid #ecc7c3}
+.btn-danger:hover{background:var(--danger);color:#fff}
+.btn-block{width:100%}
+.btn-sm{padding:9px 14px;font-size:13px;border-radius:9px}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;gap:12px}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.secret-dot{width:26px;height:26px;border-radius:7px;flex:0 0 auto;cursor:pointer;
+  background:linear-gradient(135deg,var(--navy),var(--navy-700));position:relative}
+.secret-dot::after{content:"";position:absolute;left:7px;top:7px;width:8px;height:8px;border-radius:2px;background:var(--amber)}
+.brand-name{font-weight:800;letter-spacing:.5px;color:var(--navy);font-size:19px;line-height:1}
+.brand-sub{font-size:9px;letter-spacing:3px;color:var(--slate);font-weight:600;margin-top:2px}
+.top-actions{display:flex;align-items:center;gap:8px}
+.lang-toggle{display:flex;border:1px solid var(--line-2);border-radius:999px;overflow:hidden;background:#fff}
+.lang-toggle button{padding:7px 13px;font-size:13px;font-weight:600;color:var(--slate)}
+.lang-toggle button.active{background:var(--navy);color:#fff}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.view{min-height:calc(100vh - 60px)}
+.section{padding:64px 0}
+.eyebrow{color:var(--amber);font-weight:700;font-size:13px;letter-spacing:2px;margin:0 0 10px}
+h1,h2,h3{color:var(--navy);margin:0}
+.display{font-size:clamp(34px,6vw,62px);font-weight:800;line-height:1.05;letter-spacing:-1px}
+.h2{font-size:clamp(26px,4vw,40px);font-weight:800;letter-spacing:-.5px}
+
+/* ---------- hero ---------- */
+.hero{position:relative;background:
+  radial-gradient(1200px 500px at 80% -10%, rgba(192,138,45,.14), transparent 60%),
+  linear-gradient(160deg,#fff 0%, #eef1f5 100%);
+  overflow:hidden;border-bottom:1px solid var(--line)}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center;padding:74px 0}
+.hero p.lead{font-size:18px;color:var(--slate);max-width:44ch;margin:18px 0 28px}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap}
+.hero-visual{position:relative;aspect-ratio:1/1;border-radius:24px;overflow:hidden;box-shadow:var(--shadow-lg);
+  background:linear-gradient(135deg,var(--navy),var(--navy-900))}
+.hero-visual .grid-lines{position:absolute;inset:0;opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);
+  background-size:44px 44px}
+.hv-badge{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff;text-align:center;padding:30px}
+.hv-mark{width:110px;height:110px;border:6px solid #fff;border-radius:26px;position:relative}
+.hv-mark::before{content:"";position:absolute;left:18px;bottom:18px;width:34px;height:34px;border-radius:8px;background:var(--amber)}
+.hv-mark::after{content:"";position:absolute;right:18px;top:18px;width:34px;height:34px;border-radius:8px;background:#fff}
+.hv-badge h3{color:#fff;font-size:26px}
+.hv-badge span{color:#c8d2dc;font-size:13px;letter-spacing:2px}
+.stat-row{display:flex;gap:26px;margin-top:30px;flex-wrap:wrap}
+.stat b{display:block;font-size:30px;color:var(--navy);font-weight:800;line-height:1}
+.stat span{font-size:12.5px;color:var(--slate)}
+
+/* ---------- services ---------- */
+.svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:30px}
+.svc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:24px;transition:.2s}
+.svc:hover{box-shadow:var(--shadow);transform:translateY(-3px);border-color:var(--line-2)}
+.svc .ic{width:44px;height:44px;border-radius:11px;background:rgba(19,41,61,.06);display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:22px}
+.svc h3{font-size:17px;margin-bottom:6px}
+.svc p{margin:0;color:var(--slate);font-size:14px}
+
+/* ---------- about strip ---------- */
+.about{background:var(--navy);color:#fff}
+.about h2{color:#fff}
+.about .lead{color:#c3ccd6;max-width:60ch}
+.about-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px}
+.fact{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:18px}
+.fact b{color:var(--amber);font-size:22px;display:block}
+.fact span{color:#c3ccd6;font-size:13px}
+
+/* ---------- contact ---------- */
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:30px}
+.info-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px}
+.info-row{display:flex;gap:14px;align-items:flex-start;padding:13px 0;border-bottom:1px solid var(--line)}
+.info-row:last-child{border-bottom:none}
+.info-row .ic{width:38px;height:38px;flex:0 0 auto;border-radius:10px;background:rgba(192,138,45,.12);color:var(--amber);display:flex;align-items:center;justify-content:center;font-size:18px}
+.info-row .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.info-row .val{font-weight:600;color:var(--navy);font-size:15px}
+.socials{display:flex;gap:10px;margin-top:18px}
+.soc{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  background:var(--navy);color:#fff;font-weight:700;transition:.18s}
+.soc:hover{background:var(--amber);transform:translateY(-2px)}
+.map-card{border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);min-height:340px;background:#e9edf1}
+.map-card iframe{width:100%;height:100%;min-height:340px;border:0;display:block}
+
+/* ---------- footer ---------- */
+.footer{background:var(--navy-900);color:#aeb9c4;padding:34px 0;font-size:13.5px}
+.footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center}
+
+/* ---------- auth / modals ---------- */
+.overlay{position:fixed;inset:0;background:rgba(14,32,48,.55);backdrop-filter:blur(3px);z-index:100;
+  display:flex;align-items:center;justify-content:center;padding:18px}
+.modal{background:#fff;border-radius:20px;box-shadow:var(--shadow-lg);width:100%;max-width:440px;
+  padding:30px;max-height:92vh;overflow:auto;animation:pop .2s ease}
+.modal.wide{max-width:760px}
+@keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+.modal h2{font-size:22px;margin-bottom:4px}
+.modal .sub{color:var(--slate);font-size:14px;margin-bottom:20px}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px}
+.field input,.field textarea,.field select{width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:11px;
+  background:#fbfcfd;transition:.15s;color:var(--ink)}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--amber);background:#fff;box-shadow:0 0 0 3px rgba(192,138,45,.14)}
+.field textarea{resize:vertical;min-height:90px}
+.modal-x{position:absolute;top:16px;right:18px;font-size:26px;color:var(--muted);line-height:1;background:none}
+.err{background:#fdece9;color:var(--danger);padding:10px 13px;border-radius:10px;font-size:13.5px;margin-bottom:14px;border:1px solid #f4ccc5}
+.ok{background:#e8f5ee;color:var(--success);padding:10px 13px;border-radius:10px;font-size:13.5px;margin-bottom:14px;border:1px solid #bfe3cf}
+
+/* ---------- dashboard ---------- */
+.dash{padding:26px 0 70px}
+.dash-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.dash-head h1{font-size:26px}
+.dash-head .who{color:var(--slate);font-size:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:18px;box-shadow:var(--shadow)}
+.panel h2{font-size:18px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* calendar */
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cal-head .mname{font-weight:700;font-size:17px;color:var(--navy)}
+.cal-nav{display:flex;gap:8px}
+.cal-nav button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line-2);background:#fff;color:var(--navy);font-size:17px;font-weight:700}
+.cal-nav button:hover{border-color:var(--navy)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding:6px 0;text-transform:uppercase;letter-spacing:.5px}
+.cal-cell{aspect-ratio:1/1;border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-weight:600;color:var(--navy);cursor:pointer;position:relative;transition:.12s;font-size:15px;background:#fff}
+.cal-cell:hover:not(.disabled){border-color:var(--amber);background:#fffdf8}
+.cal-cell.empty{border:none;background:none;cursor:default}
+.cal-cell.disabled{color:var(--line-2);cursor:not-allowed;background:#fafbfc}
+.cal-cell.blocked{background:#fdeee6;color:#c98b6b;cursor:not-allowed;border-color:#f2d9cc}
+.cal-cell.past{color:#c4ccd4;cursor:not-allowed;background:#fafbfc}
+.cal-cell.today{border-color:var(--navy);border-width:2px}
+.cal-cell.selected{background:var(--navy);color:#fff;border-color:var(--navy)}
+.cal-cell .dot{width:6px;height:6px;border-radius:50%;background:var(--amber);position:absolute;bottom:7px}
+.cal-cell.selected .dot{background:#fff}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12.5px;color:var(--slate)}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+
+/* time wheel picker */
+.picker{display:flex;gap:10px;justify-content:center;align-items:center;margin:6px 0 4px}
+.wheel{position:relative;width:96px;height:150px;overflow:hidden;border:1px solid var(--line-2);border-radius:14px;background:#fbfcfd}
+.wheel .band{position:absolute;left:0;right:0;top:56px;height:38px;border-top:1px solid var(--amber);border-bottom:1px solid var(--amber);
+  background:rgba(192,138,45,.07);pointer-events:none;z-index:1}
+.wheel-scroll{position:absolute;inset:0;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;text-align:center}
+.wheel-scroll::-webkit-scrollbar{display:none}
+.wheel-item{height:38px;line-height:38px;scroll-snap-align:center;font-size:20px;font-weight:600;color:var(--muted);transition:.1s}
+.wheel-item.mid{color:var(--navy);font-size:23px}
+.wheel-pad{height:56px}
+.wheel-colon{font-size:26px;font-weight:800;color:var(--navy)}
+.picked-time{text-align:center;font-size:15px;color:var(--slate);margin-top:6px}
+.picked-time b{color:var(--navy);font-size:19px}
+
+/* booking list */
+.bk{display:flex;gap:14px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:13px;margin-bottom:10px;background:#fff;transition:.15s;cursor:pointer}
+.bk:hover{border-color:var(--amber);box-shadow:var(--shadow)}
+.bk .date-chip{flex:0 0 auto;width:58px;text-align:center;background:var(--navy);color:#fff;border-radius:10px;padding:8px 0}
+.bk .date-chip b{display:block;font-size:20px;line-height:1}
+.bk .date-chip span{font-size:10px;letter-spacing:1px;text-transform:uppercase}
+.bk .bk-body{flex:1;min-width:0}
+.bk .bk-body .t{font-weight:700;color:var(--navy)}
+.bk .bk-body .r{color:var(--slate);font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk .tag{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px}
+.tag-confirmed{background:#e8f5ee;color:var(--success)}
+.tag-signed{background:rgba(192,138,45,.14);color:var(--amber-600)}
+.empty-state{text-align:center;color:var(--muted);padding:34px 10px;font-size:14px}
+
+/* signature */
+.sigwrap{border:2px dashed var(--line-2);border-radius:14px;background:#fff;position:relative;overflow:hidden}
+.sigwrap canvas{width:100%;height:200px;display:block;touch-action:none;cursor:crosshair}
+.sig-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;pointer-events:none}
+
+/* admin tables */
+.table{width:100%;border-collapse:collapse;font-size:13.5px}
+.table th{text-align:left;padding:10px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--line)}
+.table td{padding:11px 10px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:middle}
+.table tr:hover td{background:#fbfcfd}
+.tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.tab{padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;color:var(--slate);background:#fff;border:1px solid var(--line)}
+.tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.mini{font-size:12px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.chip{display:inline-block;background:#eef1f5;color:var(--navy);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+  background:var(--navy);color:#fff;padding:13px 20px;border-radius:12px;font-size:14px;font-weight:500;z-index:200;
+  box-shadow:var(--shadow-lg);transition:.25s;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--success)} .toast.err{background:var(--danger)}
+
+.cfg-banner{background:#fff8ec;border-bottom:1px solid #f0e0c0;color:#8a6d2f;font-size:12.5px;padding:8px 16px;text-align:center}
+
+@media(max-width:820px){
+  .hero-grid{grid-template-columns:1fr;gap:26px;padding:44px 0}
+  .hero-visual{max-width:340px;margin:0 auto}
+  .svc-grid{grid-template-columns:1fr 1fr}
+  .contact-grid{grid-template-columns:1fr}
+  .about-facts{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+  .section{padding:48px 0}
+}
+@media(max-width:560px){
+  .svc-grid{grid-template-columns:1fr}
+  .table-scroll{overflow-x:auto}
+}
+</style>
+</head>
+<body>
+
+<!-- optional config banner -->
+<div id="cfgBanner" class="cfg-banner hidden"></div>
+
+<!-- ============ TOP BAR ============ -->
+<div class="topbar">
+  <div class="brand">
+    <div class="secret-dot" id="secretDot" title=""></div>
+    <div>
+      <div class="brand-name">VCOP</div>
+      <div class="brand-sub">BOOKING STUDIO</div>
+    </div>
+  </div>
+  <div class="top-actions">
+    <div class="lang-toggle">
+      <button id="langEn" class="active" onclick="setLang('en')">EN</button>
+      <button id="langZh" onclick="setLang('zh')">中文</button>
+    </div>
+    <button id="topAuthBtn" class="btn btn-navy btn-sm" onclick="openClientAuth()"></button>
+  </div>
+</div>
+
+<!-- ============ APP ROOT ============ -->
+<div id="app"></div>
+
+<!-- ============ MODAL ROOT ============ -->
+<div id="modalRoot"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* =========================================================================
+   VCOP BOOKING STUDIO  —  single-file app
+   Storage: Supabase (optional) with in-memory fallback.
+   ========================================================================= */
+
+/* ---------- 1. CONFIG ---------- */
+const CONFIG = {
+  // To enable cloud saving, paste your Supabase project values here and redeploy.
+  SUPABASE_URL:  "https://mtwrfrqmqkmfqvurbqqh.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10d3JmcnFtcWttZnF2dXJicXFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyOTk5NTAsImV4cCI6MjEwNDg3NTk1MH0.ms-gED0flrlipSTLMkvaU22zkMv6MR8Ju5T9stzuIuM",
+  ADMIN_PASSWORD: "vcopphua9692",
+  WHATSAPP_NUMBER: "6596925752",           // +65 9692 5752 (no + or spaces)
+  BUSINESS: {
+    name: "VCOP Pte Ltd",
+    address: "1557 Keppel Rd, #02-03, Singapore 089066",
+    phone: "+65 6338 9822",
+    email: "sales@vcop.com.sg",
+    hours: "Mon – Fri · 9am – 6pm",
+    fb: "https://www.facebook.com/vcop.sg",
+    ig: "https://instagram.com/vcop.com.sg",
+    li: "https://sg.linkedin.com/company/vcop-pte-ltd",
+    web: "https://www.vcop.com.sg"
+  },
+  SLOT_MINUTES: 60,          // default appointment length
+  OPEN_HOUR: 9, CLOSE_HOUR: 18
+};
+
+/* ---------- 2. i18n ---------- */
+const I18N = {
+  en:{
+    login:"Log in", logout:"Log out", book:"Book appointment",
+    heroTitle:"Designing Workspaces That Work Better.",
+    heroLead:"Book a consultation or site appointment with VCOP — Singapore's office furniture and workspace solutions specialist since 2005.",
+    explore:"Book an appointment", ourServices:"Our Services",
+    exp:"Years since 2005", proj:"Projects delivered", csat:"Client-first service",
+    svcTitle:"What we do", 
+    s1:"Workspace Solutions", s1d:"Desks and workstations built for productivity and comfort.",
+    s2:"Seating Solutions", s2d:"Ergonomic chairs engineered around the natural spine.",
+    s3:"Meeting & Collaboration", s3d:"Versatile spaces that boost creativity and teamwork.",
+    s4:"Storage Solutions", s4d:"Efficient, stylish storage to keep the office organised.",
+    s5:"Accessories", s5d:"Ergonomic aids and essentials for every setup.",
+    s6:"Customization", s6d:"Tailored furniture made to your exact needs and style.",
+    aboutEye:"Who we are",
+    aboutTitle:"We build the systems behind good workspaces.",
+    aboutLead:"Founded in 2005 and based on Keppel Road in Singapore's CBD, VCOP delivers durable, customisable office systems for B2B clients who value productivity, comfort and long-lasting quality. We offer far more than furniture — we provide real, custom solutions.",
+    f1:"Established", f2:"Showroom", f3:"Focus", f3v:"B2B office solutions",
+    contactEye:"Visit us", contactTitle:"Find us & get in touch",
+    address:"Address", phone:"Phone", email:"Email", hours:"Hours", follow:"Follow us",
+    getDirections:"Get directions",
+    footRights:"All rights reserved.",
+    // auth
+    clientLogin:"Client login", clientLoginSub:"Sign in to view and book your appointments.",
+    username:"Username", password:"Password", signIn:"Sign in",
+    adminLogin:"Admin access", adminLoginSub:"Enter the admin password to continue.",
+    enter:"Enter", badCreds:"Incorrect username or password.", badAdmin:"Incorrect admin password.",
+    // client dash
+    welcome:"Welcome", yourBookings:"Your appointments", newBooking:"New appointment",
+    pickDate:"1 · Pick a date", pickTime:"2 · Choose a time", selectedDate:"Selected date",
+    reasonQ:"3 · Reason for appointment", reasonPh:"e.g. Ergonomic chair consultation, showroom visit, project discussion…",
+    confirmBook:"Confirm booking", chooseDateFirst:"Please pick a date on the calendar first.",
+    enterReason:"Please enter a reason for the appointment.",
+    booked:"Appointment booked!", noBookings:"No appointments yet. Pick a date to get started.",
+    // overlap
+    overlapTitle:"Time overlaps another appointment",
+    overlapBody:"There is already an appointment around this time. Do you want to continue booking anyway?",
+    continueAnyway:"Continue anyway", cancelChange:"Cancel & change time",
+    // booking detail
+    bkDetail:"Appointment details", date:"Date", time:"Time", reason:"Reason", status:"Status",
+    confirmed:"Confirmed", signed:"Signed",
+    sendWa:"Send WhatsApp confirmation", addCal:"Add to my calendar",
+    signNow:"Sign to start session", clear:"Clear", saveSig:"Save signature",
+    sigSaved:"Signature saved. Session confirmed.", sigFirst:"Please sign in the box first.",
+    close:"Close", signHint:"Sign here with your finger or mouse",
+    waSent:"Opening WhatsApp…", calAdded:"Calendar file downloaded.",
+    delBooking:"Cancel appointment", delConfirm:"Cancel this appointment? This cannot be undone.",
+    // admin
+    adminPanel:"Admin panel", tabBookings:"Appointments", tabClients:"Clients", tabBlock:"Block dates", tabExport:"Export",
+    allBookings:"All appointments", client:"Client", actions:"Actions",
+    addClient:"Add client", editClient:"Edit client", name:"Full name", clientPhone:"Phone", clientEmail:"Email",
+    save:"Save", cancel:"Cancel", edit:"Edit", del:"Delete",
+    clientAdded:"Client saved.", clientDeleted:"Client deleted.", delClientConfirm:"Delete this client and all their appointments?",
+    userTaken:"That username is already taken.", fillAll:"Please fill in username, password and name.",
+    blockTitle:"Block a date or time slot", blockDate:"Date to block", blockWhole:"Block the whole day",
+    blockTimeLbl:"Specific time (optional)", addBlock:"Add block", blockedList:"Currently blocked",
+    blockAdded:"Block added.", noBlocks:"Nothing blocked yet.", unblock:"Remove",
+    exportTitle:"Export appointments & signatures", exportClient:"Client", exportAll:"All clients",
+    fromDate:"From date", toDate:"To date", exportCsv:"Export CSV", exportReport:"Export report (with signatures)",
+    noData:"No appointments match your selection.", export:"Export",
+    viewSig:"View signature", noSig:"Not signed yet",
+    resetPw:"Reset password", newPw:"New password",
+    savedCloud:"Saved to cloud", savedLocal:"Saved on this device (session)",
+    whole:"Whole day", unsigned:"Unsigned"
+  },
+  zh:{
+    login:"登录", logout:"登出", book:"预约",
+    heroTitle:"打造更高效的办公空间。",
+    heroLead:"与 VCOP 预约咨询或实地会面 —— 自 2005 年起，新加坡专业的办公家具与办公空间解决方案供应商。",
+    explore:"立即预约", ourServices:"我们的服务",
+    exp:"深耕行业（自2005）", proj:"完成项目", csat:"以客户为先",
+    svcTitle:"我们的业务",
+    s1:"办公空间方案", s1d:"为高效与舒适而设计的办公桌与工作站。",
+    s2:"座椅方案", s2d:"依照人体脊椎曲线设计的人体工学座椅。",
+    s3:"会议与协作", s3d:"激发创意与团队合作的多功能空间。",
+    s4:"储物方案", s4d:"高效又美观的储物方案，让办公室井然有序。",
+    s5:"配件", s5d:"适合各种配置的人体工学辅助与必备配件。",
+    s6:"定制服务", s6d:"依您的需求与风格量身打造的家具。",
+    aboutEye:"关于我们",
+    aboutTitle:"我们打造优质办公空间背后的系统。",
+    aboutLead:"VCOP 成立于 2005 年，坐落于新加坡中央商业区吉宝路。我们为重视效率、舒适与耐用品质的企业客户，提供坚固耐用、可定制的办公系统。我们提供的远不止家具，更是真正的定制解决方案。",
+    f1:"成立年份", f2:"陈列室", f3:"专注领域", f3v:"企业办公方案",
+    contactEye:"欢迎莅临", contactTitle:"地址与联系方式",
+    address:"地址", phone:"电话", email:"电邮", hours:"营业时间", follow:"关注我们",
+    getDirections:"获取路线",
+    footRights:"版权所有。",
+    clientLogin:"客户登录", clientLoginSub:"登录以查看及预约您的行程。",
+    username:"用户名", password:"密码", signIn:"登录",
+    adminLogin:"管理员登录", adminLoginSub:"请输入管理员密码以继续。",
+    enter:"进入", badCreds:"用户名或密码错误。", badAdmin:"管理员密码错误。",
+    welcome:"欢迎", yourBookings:"您的预约", newBooking:"新预约",
+    pickDate:"1 · 选择日期", pickTime:"2 · 选择时间", selectedDate:"已选日期",
+    reasonQ:"3 · 预约事由", reasonPh:"例如：人体工学座椅咨询、陈列室参观、项目洽谈……",
+    confirmBook:"确认预约", chooseDateFirst:"请先在日历上选择日期。",
+    enterReason:"请填写预约事由。",
+    booked:"预约成功！", noBookings:"暂无预约，选择日期即可开始。",
+    overlapTitle:"该时间与其他预约重叠",
+    overlapBody:"此时间段附近已有预约。是否仍要继续预约？",
+    continueAnyway:"仍然继续", cancelChange:"取消并更改时间",
+    bkDetail:"预约详情", date:"日期", time:"时间", reason:"事由", status:"状态",
+    confirmed:"已确认", signed:"已签名",
+    sendWa:"发送 WhatsApp 确认", addCal:"加入我的日历",
+    signNow:"签名以开始", clear:"清除", saveSig:"保存签名",
+    sigSaved:"签名已保存，行程已确认。", sigFirst:"请先在框内签名。",
+    close:"关闭", signHint:"请用手指或鼠标在此签名",
+    waSent:"正在打开 WhatsApp……", calAdded:"日历文件已下载。",
+    delBooking:"取消预约", delConfirm:"确定取消此预约？此操作无法撤销。",
+    adminPanel:"管理后台", tabBookings:"预约管理", tabClients:"客户管理", tabBlock:"封锁日期", tabExport:"导出",
+    allBookings:"所有预约", client:"客户", actions:"操作",
+    addClient:"新增客户", editClient:"编辑客户", name:"姓名", clientPhone:"电话", clientEmail:"电邮",
+    save:"保存", cancel:"取消", edit:"编辑", del:"删除",
+    clientAdded:"客户已保存。", clientDeleted:"客户已删除。", delClientConfirm:"删除此客户及其所有预约？",
+    userTaken:"该用户名已被使用。", fillAll:"请填写用户名、密码与姓名。",
+    blockTitle:"封锁日期或时间段", blockDate:"要封锁的日期", blockWhole:"封锁整天",
+    blockTimeLbl:"指定时间（可选）", addBlock:"新增封锁", blockedList:"当前已封锁",
+    blockAdded:"已新增封锁。", noBlocks:"暂无封锁。", unblock:"移除",
+    exportTitle:"导出预约与签名", exportClient:"客户", exportAll:"所有客户",
+    fromDate:"起始日期", toDate:"结束日期", exportCsv:"导出 CSV", exportReport:"导出报告（含签名）",
+    noData:"没有符合条件的预约。", export:"导出",
+    viewSig:"查看签名", noSig:"尚未签名",
+    resetPw:"重置密码", newPw:"新密码",
+    savedCloud:"已保存至云端", savedLocal:"已保存在本机（当前会话）",
+    whole:"整天", unsigned:"未签名"
+  }
+};
+let LANG = "en";
+const t = k => (I18N[LANG][k] ?? I18N.en[k] ?? k);
+
+/* ---------- 3. STORAGE LAYER ---------- */
+let sb = null, CLOUD = false;
+const STORE = { clients:[], bookings:[], blocks:[] };
+
+async function initStorage(){
+  if(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY && window.supabase){
+    try{
+      sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+      const [c,b,k] = await Promise.all([
+        sb.from('clients').select('*'),
+        sb.from('bookings').select('*'),
+        sb.from('blocks').select('*')
+      ]);
+      if(!c.error) STORE.clients = c.data||[];
+      if(!b.error) STORE.bookings = b.data||[];
+      if(!k.error) STORE.blocks = k.data||[];
+      CLOUD = true;
+    }catch(e){ console.warn("Supabase init failed, using local memory:", e); CLOUD=false; }
+  }
+  if(!CLOUD) seedDemo();
+  showCfgBanner();
+}
+function seedDemo(){
+  if(STORE.clients.length===0){
+    STORE.clients.push({id:uid(), username:"demo", password:"demo123",
+      name:"Demo Client", phone:"+65 9000 0000", email:"demo@vcop.com.sg", created_at:now()});
+  }
+}
+function showCfgBanner(){
+  const el = document.getElementById('cfgBanner');
+  if(!CLOUD){
+    el.classList.remove('hidden');
+    el.innerHTML = "Demo mode — data is kept for this session only. Add Supabase keys in CONFIG to save permanently. &nbsp;·&nbsp; Demo client: <b>demo / demo123</b>";
+  } else el.classList.add('hidden');
+}
+
+// generic helpers to persist
+async function dbInsert(table,row){
+  STORE[table].push(row);
+  if(CLOUD){ const {error}=await sb.from(table).insert(row); if(error)console.warn(error);}
+}
+async function dbUpdate(table,id,patch){
+  const r = STORE[table].find(x=>x.id===id); if(r) Object.assign(r,patch);
+  if(CLOUD){ const {error}=await sb.from(table).update(patch).eq('id',id); if(error)console.warn(error);}
+}
+async function dbDelete(table,id){
+  STORE[table] = STORE[table].filter(x=>x.id!==id);
+  if(CLOUD){ const {error}=await sb.from(table).delete().eq('id',id); if(error)console.warn(error);}
+}
+async function dbDeleteWhere(table,pred){
+  const doomed = STORE[table].filter(pred);
+  STORE[table] = STORE[table].filter(x=>!pred(x));
+  if(CLOUD){ for(const d of doomed){ await sb.from(table).delete().eq('id',d.id);} }
+}
+
+/* ---------- 4. UTILITIES ---------- */
+function uid(){ return 'id-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8); }
+function now(){ return new Date().toISOString(); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function ymd(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function parseYMD(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function fmtDateLong(s){
+  const d=parseYMD(s);
+  const enM=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const zhD=["日","一","二","三","四","五","六"];
+  if(LANG==='zh') return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 星期${zhD[d.getDay()]}`;
+  const enD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  return `${enD[d.getDay()]}, ${d.getDate()} ${enM[d.getMonth()]} ${d.getFullYear()}`;
+}
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show '+type;
+  clearTimeout(el._t); el._t=setTimeout(()=>el.className='toast '+type,2600);
+}
+function esc(s){ return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function minutesOf(hhmm){ const [h,m]=hhmm.split(':').map(Number); return h*60+m; }
+function addMin(hhmm,mins){ let x=minutesOf(hhmm)+mins; return pad(Math.floor(x/60))+':'+pad(x%60); }
+
+/* ---------- 5. SESSION ---------- */
+let SESSION = { role:null, client:null };  // role: 'client' | 'admin'
+
+/* ---------- 6. ROUTER / RENDER ---------- */
+function render(){
+  const app=document.getElementById('app');
+  const authBtn=document.getElementById('topAuthBtn');
+  if(SESSION.role==='client'){
+    authBtn.textContent=t('logout'); authBtn.onclick=logout;
+    app.innerHTML=viewClientDash();
+    afterClientDash();
+  }else if(SESSION.role==='admin'){
+    authBtn.textContent=t('logout'); authBtn.onclick=logout;
+    app.innerHTML=viewAdminDash();
+    afterAdminDash();
+  }else{
+    authBtn.textContent=t('login'); authBtn.onclick=openClientAuth;
+    app.innerHTML=viewLanding();
+  }
+}
+function setLang(l){
+  LANG=l;
+  document.getElementById('langEn').classList.toggle('active',l==='en');
+  document.getElementById('langZh').classList.toggle('active',l==='zh');
+  document.documentElement.lang = (l==='zh'?'zh':'en');
+  closeModal(); render();
+}
+function logout(){ SESSION={role:null,client:null}; closeModal(); render(); window.scrollTo(0,0); }
+
+/* ---------- 7. LANDING PAGE ---------- */
+function viewLanding(){
+  const B=CONFIG.BUSINESS;
+  const mapSrc="https://www.google.com/maps?q="+encodeURIComponent(B.address)+"&output=embed";
+  const dirLink="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(B.address);
+  return `
+  <div class="view">
+    <!-- HERO -->
+    <section class="hero"><div class="wrap"><div class="hero-grid">
+      <div>
+        <p class="eyebrow">VCOP · SINGAPORE · EST. 2005</p>
+        <h1 class="display">${t('heroTitle')}</h1>
+        <p class="lead">${t('heroLead')}</p>
+        <div class="hero-cta">
+          <button class="btn btn-primary" onclick="openClientAuth()">${t('explore')} →</button>
+          <a class="btn btn-ghost" href="#contact">${t('contactTitle')}</a>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><b>2005</b><span>${t('exp')}</span></div>
+          <div class="stat"><b>500+</b><span>${t('proj')}</span></div>
+          <div class="stat"><b>B2B</b><span>${t('csat')}</span></div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="grid-lines"></div>
+        <div class="hv-badge">
+          <div class="hv-mark"></div>
+          <div><h3>VCOP</h3><span>BOOKING STUDIO</span></div>
+        </div>
+      </div>
+    </div></div></section>
+
+    <!-- SERVICES -->
+    <section class="section"><div class="wrap">
+      <p class="eyebrow">${t('ourServices')}</p>
+      <h2 class="h2">${t('svcTitle')}</h2>
+      <div class="svc-grid">
+        ${[['🗄️','s1','s1d'],['🪑','s2','s2d'],['🤝','s3','s3d'],['📦','s4','s4d'],['🔌','s5','s5d'],['✏️','s6','s6d']]
+          .map(([ic,a,b])=>`<div class="svc"><div class="ic">${ic}</div><h3>${t(a)}</h3><p>${t(b)}</p></div>`).join('')}
+      </div>
+    </div></section>
+
+    <!-- ABOUT -->
+    <section class="section about"><div class="wrap">
+      <p class="eyebrow">${t('aboutEye')}</p>
+      <h2 class="h2">${t('aboutTitle')}</h2>
+      <p class="lead">${t('aboutLead')}</p>
+      <div class="about-facts">
+        <div class="fact"><b>2005</b><span>${t('f1')}</span></div>
+        <div class="fact"><b>Keppel Rd</b><span>${t('f2')} · Singapore CBD</span></div>
+        <div class="fact"><b>${t('f3v')}</b><span>${t('f3')}</span></div>
+      </div>
+    </div></section>
+
+    <!-- CONTACT + MAP -->
+    <section class="section" id="contact"><div class="wrap">
+      <p class="eyebrow">${t('contactEye')}</p>
+      <h2 class="h2">${t('contactTitle')}</h2>
+      <div class="contact-grid">
+        <div class="info-card">
+          <div class="info-row"><div class="ic">📍</div><div><div class="lbl">${t('address')}</div><div class="val">${B.address}</div></div></div>
+          <div class="info-row"><div class="ic">📞</div><div><div class="lbl">${t('phone')}</div><div class="val"><a href="tel:${B.phone.replace(/\s/g,'')}">${B.phone}</a></div></div></div>
+          <div class="info-row"><div class="ic">✉️</div><div><div class="lbl">${t('email')}</div><div class="val"><a href="mailto:${B.email}">${B.email}</a></div></div></div>
+          <div class="info-row"><div class="ic">🕘</div><div><div class="lbl">${t('hours')}</div><div class="val">${B.hours}</div></div></div>
+          <div class="lbl" style="margin-top:16px">${t('follow')}</div>
+          <div class="socials">
+            <a class="soc" href="${B.fb}" target="_blank" title="Facebook">f</a>
+            <a class="soc" href="${B.ig}" target="_blank" title="Instagram">◎</a>
+            <a class="soc" href="${B.li}" target="_blank" title="LinkedIn">in</a>
+            <a class="soc" href="mailto:${B.email}" title="Email">@</a>
+          </div>
+          <a class="btn btn-navy btn-block" style="margin-top:18px" href="${dirLink}" target="_blank">${t('getDirections')} →</a>
+        </div>
+        <div class="map-card">
+          <iframe src="${mapSrc}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="VCOP location"></iframe>
+        </div>
+      </div>
+    </div></section>
+
+    <footer class="footer"><div class="wrap">
+      <div>© ${new Date().getFullYear()} ${B.name}. ${t('footRights')}</div>
+      <div><a href="${B.web}" target="_blank">${B.web.replace('https://','')}</a></div>
+    </div></footer>
+  </div>`;
+}
+
+/* ---------- 8. CLIENT AUTH ---------- */
+function openClientAuth(){
+  if(SESSION.role==='client'){ return; }
+  modal(`
+    <button class="modal-x" onclick="closeModal()">×</button>
+    <h2>${t('clientLogin')}</h2>
+    <p class="sub">${t('clientLoginSub')}</p>
+    <div id="authErr"></div>
+    <div class="field"><label>${t('username')}</label><input id="cu" autocomplete="username" /></div>
+    <div class="field"><label>${t('password')}</label><input id="cp" type="password" autocomplete="current-password" /></div>
+    <button class="btn btn-primary btn-block" onclick="clientLogin()">${t('signIn')}</button>
+  `);
+  setTimeout(()=>document.getElementById('cu')?.focus(),50);
+}
+function clientLogin(){
+  const u=document.getElementById('cu').value.trim();
+  const p=document.getElementById('cp').value;
+  const c=STORE.clients.find(x=>x.username.toLowerCase()===u.toLowerCase() && x.password===p);
+  if(!c){ document.getElementById('authErr').innerHTML=`<div class="err">${t('badCreds')}</div>`; return; }
+  SESSION={role:'client',client:c}; closeModal(); render(); window.scrollTo(0,0);
+}
+
+/* ---------- 9. SECRET ADMIN ENTRY ---------- */
+let tapCount=0, tapTimer=null;
+document.getElementById('secretDot').addEventListener('click',()=>{
+  tapCount++;
+  clearTimeout(tapTimer);
+  tapTimer=setTimeout(()=>tapCount=0,1200);
+  if(tapCount>=3){ tapCount=0; openAdminAuth(); }
+});
+function openAdminAuth(){
+  modal(`
+    <button class="modal-x" onclick="closeModal()">×</button>
+    <h2>${t('adminLogin')}</h2>
+    <p class="sub">${t('adminLoginSub')}</p>
+    <div id="adminErr"></div>
+    <div class="field"><label>${t('password')}</label><input id="ap" type="password" autocomplete="off" /></div>
+    <button class="btn btn-navy btn-block" onclick="adminLogin()">${t('enter')}</button>
+  `);
+  setTimeout(()=>document.getElementById('ap')?.focus(),50);
+}
+function adminLogin(){
+  const p=document.getElementById('ap').value;
+  if(p!==CONFIG.ADMIN_PASSWORD){ document.getElementById('adminErr').innerHTML=`<div class="err">${t('badAdmin')}</div>`; return; }
+  SESSION={role:'admin',client:null}; closeModal(); render(); window.scrollTo(0,0);
+}
+
+/* ---------- 10. CLIENT DASHBOARD ---------- */
+let CAL = { month:new Date().getMonth(), year:new Date().getFullYear(), selected:null };
+let PICK = { h:9, m:0 };
+
+function viewClientDash(){
+  const c=SESSION.client;
+  return `
+  <div class="wrap dash">
+    <div class="dash-head">
+      <div><h1>${t('welcome')}, ${esc(c.name)} 👋</h1><div class="who">${esc(c.username)} · ${esc(c.phone||'')}</div></div>
+    </div>
+    <div class="panel">
+      <h2>📅 ${t('newBooking')}</h2>
+      <div class="grid2">
+        <div>
+          <div class="mini" style="margin-bottom:8px;font-weight:700;color:var(--navy)">${t('pickDate')}</div>
+          <div id="calMount"></div>
+          <div class="legend">
+            <span><i style="background:var(--navy)"></i>${t('selectedDate')}</span>
+            <span><i style="background:#fdeee6;border:1px solid #f2d9cc"></i>${t('whole')}</span>
+            <span><i style="background:var(--amber)"></i>${t('yourBookings')}</span>
+          </div>
+        </div>
+        <div>
+          <div class="mini" style="margin-bottom:8px;font-weight:700;color:var(--navy)">${t('pickTime')}</div>
+          <div id="timeMount"></div>
+          <div class="field" style="margin-top:16px">
+            <label>${t('reasonQ')}</label>
+            <textarea id="reason" placeholder="${esc(t('reasonPh'))}"></textarea>
+          </div>
+          <button class="btn btn-primary btn-block" onclick="confirmBooking()">${t('confirmBook')}</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>🗂️ ${t('yourBookings')}</h2>
+      <div id="myBookings"></div>
+    </div>
+  </div>`;
+}
+function afterClientDash(){
+  CAL.selected=null;
+  mountCalendar('calMount', true);
+  mountTimeWheel('timeMount');
+  renderMyBookings();
+}
+
+/* ----- calendar ----- */
+function mountCalendar(mountId, clientMode){
+  const el=document.getElementById(mountId); if(!el) return;
+  const first=new Date(CAL.year,CAL.month,1);
+  const startDow=first.getDay();
+  const daysIn=new Date(CAL.year,CAL.month+1,0).getDate();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const enM=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const zhM=["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+  const mname = LANG==='zh'? `${CAL.year}年 ${zhM[CAL.month]}` : `${enM[CAL.month]} ${CAL.year}`;
+  const dowEn=["S","M","T","W","T","F","S"], dowZh=["日","一","二","三","四","五","六"];
+  const dows=(LANG==='zh'?dowZh:dowEn);
+
+  let cells='';
+  for(let i=0;i<startDow;i++) cells+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=daysIn;d++){
+    const dateObj=new Date(CAL.year,CAL.month,d);
+    const ds=ymd(dateObj);
+    const isPast=dateObj<today;
+    const isToday=ds===ymd(today);
+    const wholeBlocked=STORE.blocks.some(b=>b.date===ds && !b.time);
+    const hasMine=clientMode && STORE.bookings.some(b=>b.client_id===SESSION.client?.id && b.date===ds);
+    let cls='cal-cell';
+    if(isPast){cls+=' past';}
+    else if(wholeBlocked){cls+=' blocked';}
+    if(isToday) cls+=' today';
+    if(CAL.selected===ds) cls+=' selected';
+    const clickable=!isPast && !wholeBlocked;
+    cells+=`<div class="${cls}" ${clickable?`onclick="selectDate('${ds}')"`:''}>${d}${hasMine?'<span class="dot"></span>':''}</div>`;
+  }
+  el.innerHTML=`
+    <div class="cal-head">
+      <div class="mname">${mname}</div>
+      <div class="cal-nav"><button onclick="calMove(-1,'${mountId}',${!!clientMode})">‹</button><button onclick="calMove(1,'${mountId}',${!!clientMode})">›</button></div>
+    </div>
+    <div class="cal-grid">${dows.map(x=>`<div class="cal-dow">${x}</div>`).join('')}${cells}</div>`;
+}
+function calMove(dir,mountId,clientMode){
+  CAL.month+=dir;
+  if(CAL.month<0){CAL.month=11;CAL.year--;}
+  if(CAL.month>11){CAL.month=0;CAL.year++;}
+  mountCalendar(mountId,clientMode);
+}
+function selectDate(ds){ CAL.selected=ds; mountCalendar('calMount',true); }
+
+/* ----- time wheel ----- */
+function mountTimeWheel(mountId){
+  const el=document.getElementById(mountId); if(!el) return;
+  const hours=[]; for(let h=CONFIG.OPEN_HOUR;h<=CONFIG.CLOSE_HOUR;h++) hours.push(h);
+  const mins=[0,15,30,45];
+  el.innerHTML=`
+    <div class="picker">
+      <div class="wheel"><div class="band"></div>
+        <div class="wheel-scroll" id="wH">
+          <div class="wheel-pad"></div>
+          ${hours.map(h=>`<div class="wheel-item" data-v="${h}">${pad(h)}</div>`).join('')}
+          <div class="wheel-pad"></div>
+        </div>
+      </div>
+      <div class="wheel-colon">:</div>
+      <div class="wheel"><div class="band"></div>
+        <div class="wheel-scroll" id="wM">
+          <div class="wheel-pad"></div>
+          ${mins.map(m=>`<div class="wheel-item" data-v="${m}">${pad(m)}</div>`).join('')}
+          <div class="wheel-pad"></div>
+        </div>
+      </div>
+    </div>
+    <div class="picked-time">${t('time')}: <b id="pickedTime">${pad(PICK.h)}:${pad(PICK.m)}</b></div>`;
+  setupWheel('wH', v=>{PICK.h=+v; updatePicked();});
+  setupWheel('wM', v=>{PICK.m=+v; updatePicked();});
+  // set initial scroll positions
+  scrollWheelTo('wH', hours.indexOf(PICK.h));
+  scrollWheelTo('wM', mins.indexOf(PICK.m));
+}
+function updatePicked(){ const e=document.getElementById('pickedTime'); if(e) e.textContent=pad(PICK.h)+':'+pad(PICK.m); }
+function scrollWheelTo(id,idx){
+  const sc=document.getElementById(id); if(!sc||idx<0) return;
+  const ITEM=38;
+  sc.scrollTop=idx*ITEM;
+  highlightMid(sc);
+}
+function setupWheel(id,onPick){
+  const sc=document.getElementById(id); if(!sc) return;
+  const ITEM=38;
+  let tmr=null;
+  sc.addEventListener('scroll',()=>{
+    highlightMid(sc);
+    clearTimeout(tmr);
+    tmr=setTimeout(()=>{
+      const idx=Math.round(sc.scrollTop/ITEM);
+      sc.scrollTo({top:idx*ITEM,behavior:'smooth'});
+      const items=sc.querySelectorAll('.wheel-item');
+      const chosen=items[idx];
+      if(chosen) onPick(chosen.dataset.v);
+    },90);
+  },{passive:true});
+}
+function highlightMid(sc){
+  const ITEM=38;
+  const idx=Math.round(sc.scrollTop/ITEM);
+  sc.querySelectorAll('.wheel-item').forEach((it,i)=>it.classList.toggle('mid',i===idx));
+}
+
+/* ----- confirm booking (with overlap check) ----- */
+function confirmBooking(){
+  if(!CAL.selected){ toast(t('chooseDateFirst'),'err'); return; }
+  const reason=document.getElementById('reason').value.trim();
+  if(!reason){ toast(t('enterReason'),'err'); return; }
+  const time=pad(PICK.h)+':'+pad(PICK.m);
+  // blocked exact slot?
+  const slotBlocked=STORE.blocks.some(b=>b.date===CAL.selected && b.time===time);
+  if(slotBlocked){ toast(LANG==='zh'?'该时间段已被封锁。':'That time slot is blocked.','err'); return; }
+  // overlap detection
+  const start=minutesOf(time), end=start+CONFIG.SLOT_MINUTES;
+  const overlap=STORE.bookings.find(b=>{
+    if(b.date!==CAL.selected) return false;
+    const s=minutesOf(b.time), e=s+(b.duration||CONFIG.SLOT_MINUTES);
+    return start<e && s<end;
+  });
+  if(overlap){ PENDING={reason,time,date:CAL.selected}; askOverlap(); return; }
+  doBook(reason,time);
+}
+let PENDING=null;
+function askOverlap(){
+  modal(`
+    <h2>⚠️ ${t('overlapTitle')}</h2>
+    <p class="sub">${t('overlapBody')}</p>
+    <div style="background:#fbfcfd;border:1px solid var(--line);border-radius:11px;padding:13px;margin-bottom:16px">
+      <b>${fmtDateLong(PENDING.date)}</b> · ${PENDING.time}
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-bottom:10px" onclick="doBookPending()">${t('continueAnyway')}</button>
+    <button class="btn btn-ghost btn-block" onclick="closeModal()">${t('cancelChange')}</button>
+  `);
+}
+function doBookPending(){ if(PENDING){ const p=PENDING; PENDING=null; doBook(p.reason,p.time); } }
+async function doBook(reason,time){
+  closeModal();
+  const c=SESSION.client;
+  const bk={id:uid(), client_id:c.id, client_name:c.name, date:CAL.selected, time,
+    duration:CONFIG.SLOT_MINUTES, reason, signature:null, status:'confirmed', created_at:now()};
+  await dbInsert('bookings',bk);
+  document.getElementById('reason').value='';
+  renderMyBookings(); mountCalendar('calMount',true);
+  toast(t('booked')+' ✓','ok');
+  openBookingDetail(bk.id, true);   // open detail with WhatsApp / calendar / sign
+}
+
+/* ----- my bookings list ----- */
+function renderMyBookings(){
+  const el=document.getElementById('myBookings'); if(!el) return;
+  const mine=STORE.bookings.filter(b=>b.client_id===SESSION.client.id)
+    .sort((a,b)=> (a.date+a.time)<(b.date+b.time)?1:-1);
+  if(!mine.length){ el.innerHTML=`<div class="empty-state">${t('noBookings')}</div>`; return; }
+  const enM=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  el.innerHTML=mine.map(b=>{
+    const d=parseYMD(b.date);
+    const tag=b.signature?`<span class="tag tag-signed">${t('signed')}</span>`:`<span class="tag tag-confirmed">${t('confirmed')}</span>`;
+    return `<div class="bk" onclick="openBookingDetail('${b.id}')">
+      <div class="date-chip"><b>${d.getDate()}</b><span>${enM[d.getMonth()]}</span></div>
+      <div class="bk-body"><div class="t">${b.time} · ${fmtDateLong(b.date)}</div><div class="r">${esc(b.reason)}</div></div>
+      ${tag}
+    </div>`;
+  }).join('');
+}
+
+/* ----- booking detail: WhatsApp, calendar, signature ----- */
+function openBookingDetail(id, justBooked){
+  const b=STORE.bookings.find(x=>x.id===id); if(!b) return;
+  const waText=encodeURIComponent(
+    `VCOP Booking Confirmation\n----------------------\nName: ${b.client_name}\nDate: ${fmtDateLong(b.date)}\nTime: ${b.time}\nReason: ${b.reason}\n\nPlease confirm this appointment. Thank you.`);
+  const waLink=`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${waText}`;
+  modal(`
+    <button class="modal-x" onclick="closeModal()">×</button>
+    <h2>${justBooked?('✅ '+t('booked')):t('bkDetail')}</h2>
+    <p class="sub">${esc(b.client_name)}</p>
+    <div style="background:#fbfcfd;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px">
+      <div class="info-row" style="padding:7px 0"><div><div class="lbl">${t('date')}</div><div class="val">${fmtDateLong(b.date)}</div></div></div>
+      <div class="info-row" style="padding:7px 0"><div><div class="lbl">${t('time')}</div><div class="val">${b.time}</div></div></div>
+      <div class="info-row" style="padding:7px 0;border-bottom:none"><div><div class="lbl">${t('reason')}</div><div class="val" style="font-weight:500">${esc(b.reason)}</div></div></div>
+    </div>
+    <a class="btn btn-navy btn-block" style="margin-bottom:10px;background:#25D366" href="${waLink}" target="_blank" onclick="toast(t('waSent'))">🟢 ${t('sendWa')}</a>
+    <button class="btn btn-ghost btn-block" style="margin-bottom:10px" onclick="addToCalendar('${b.id}')">📆 ${t('addCal')}</button>
+    <div style="border-top:1px solid var(--line);margin:16px 0 14px"></div>
+    <div style="font-weight:700;color:var(--navy);margin-bottom:8px">✍️ ${t('signNow')}</div>
+    <div class="sigwrap" id="sigWrap">
+      <canvas id="sigCanvas"></canvas>
+      <div class="sig-hint" id="sigHint">${t('signHint')}</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <button class="btn btn-ghost" style="flex:1" onclick="clearSig()">${t('clear')}</button>
+      <button class="btn btn-primary" style="flex:2" onclick="saveSig('${b.id}')">${t('saveSig')}</button>
+    </div>
+    <button class="btn btn-danger btn-block" style="margin-top:14px" onclick="cancelBooking('${b.id}')">🗑 ${t('delBooking')}</button>
+  `,'');
+  setupSignature(b);
+}
+function addToCalendar(id){
+  const b=STORE.bookings.find(x=>x.id===id); if(!b) return;
+  const start=new Date(`${b.date}T${b.time}:00`);
+  const end=new Date(start.getTime()+ (b.duration||60)*60000);
+  const fmt=d=>d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(d.getHours())+pad(d.getMinutes())+'00';
+  const ics=`BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//VCOP//Booking//EN\nBEGIN:VEVENT\nUID:${b.id}@vcop\nDTSTAMP:${fmt(new Date())}\nDTSTART:${fmt(start)}\nDTEND:${fmt(end)}\nSUMMARY:VCOP Appointment\nDESCRIPTION:${b.reason.replace(/\n/g,' ')}\nLOCATION:${CONFIG.BUSINESS.address}\nEND:VEVENT\nEND:VCALENDAR`;
+  const blob=new Blob([ics],{type:'text/calendar'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`VCOP-${b.date}-${b.time.replace(':','')}.ics`; a.click();
+  URL.revokeObjectURL(url);
+  // also offer Google Calendar
+  const g=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=VCOP+Appointment&dates=${fmt(start)}/${fmt(end)}&details=${encodeURIComponent(b.reason)}&location=${encodeURIComponent(CONFIG.BUSINESS.address)}`;
+  window.open(g,'_blank');
+  toast(t('calAdded'),'ok');
+}
+
+/* ----- signature pad ----- */
+let sigCtx=null, sigDrawing=false, sigHasInk=false;
+function setupSignature(b){
+  const cv=document.getElementById('sigCanvas'); if(!cv) return;
+  const wrap=document.getElementById('sigWrap');
+  const ratio=window.devicePixelRatio||1;
+  const w=wrap.clientWidth, h=200;
+  cv.width=w*ratio; cv.height=h*ratio;
+  sigCtx=cv.getContext('2d'); sigCtx.scale(ratio,ratio);
+  sigCtx.lineWidth=2.4; sigCtx.lineCap='round'; sigCtx.lineJoin='round'; sigCtx.strokeStyle='#13293D';
+  sigHasInk=false;
+  // if already signed, load it
+  if(b.signature){
+    const img=new Image(); img.onload=()=>sigCtx.drawImage(img,0,0,w,h); img.src=b.signature;
+    sigHasInk=true; hideHint();
+  }
+  const pos=e=>{
+    const r=cv.getBoundingClientRect();
+    const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    return {x:cx,y:cy};
+  };
+  const down=e=>{e.preventDefault();sigDrawing=true;hideHint();const p=pos(e);sigCtx.beginPath();sigCtx.moveTo(p.x,p.y);};
+  const move=e=>{if(!sigDrawing)return;e.preventDefault();const p=pos(e);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();sigHasInk=true;};
+  const up=()=>{sigDrawing=false;};
+  cv.onmousedown=down; cv.onmousemove=move; window.onmouseup=up;
+  cv.ontouchstart=down; cv.ontouchmove=move; cv.ontouchend=up;
+}
+function hideHint(){ const h=document.getElementById('sigHint'); if(h) h.style.display='none'; }
+function clearSig(){ if(!sigCtx)return; const cv=document.getElementById('sigCanvas');
+  sigCtx.clearRect(0,0,cv.width,cv.height); sigHasInk=false; const h=document.getElementById('sigHint'); if(h)h.style.display='flex'; }
+async function saveSig(id){
+  if(!sigHasInk){ toast(t('sigFirst'),'err'); return; }
+  const cv=document.getElementById('sigCanvas');
+  const data=cv.toDataURL('image/png');
+  await dbUpdate('bookings',id,{signature:data,status:'signed'});
+  closeModal(); renderMyBookings();
+  toast(t('sigSaved'),'ok');
+}
+async function cancelBooking(id){
+  if(!confirm(t('delConfirm'))) return;
+  await dbDelete('bookings',id);
+  closeModal(); renderMyBookings(); mountCalendar('calMount',true);
+  toast('✓','ok');
+}
+
+/* ---------- 11. ADMIN DASHBOARD ---------- */
+let ADMIN_TAB='bookings';
+function viewAdminDash(){
+  return `
+  <div class="wrap dash">
+    <div class="dash-head">
+      <div><h1>⚙️ ${t('adminPanel')}</h1><div class="who">${CLOUD?('☁️ '+t('savedCloud')):('💾 '+t('savedLocal'))}</div></div>
+    </div>
+    <div class="tabs">
+      <button class="tab ${ADMIN_TAB==='bookings'?'active':''}" onclick="setAdminTab('bookings')">🗓️ ${t('tabBookings')}</button>
+      <button class="tab ${ADMIN_TAB==='clients'?'active':''}" onclick="setAdminTab('clients')">👤 ${t('tabClients')}</button>
+      <button class="tab ${ADMIN_TAB==='block'?'active':''}" onclick="setAdminTab('block')">🚫 ${t('tabBlock')}</button>
+      <button class="tab ${ADMIN_TAB==='export'?'active':''}" onclick="setAdminTab('export')">📤 ${t('tabExport')}</button>
+    </div>
+    <div id="adminBody"></div>
+  </div>`;
+}
+function afterAdminDash(){ renderAdminTab(); }
+function setAdminTab(x){ ADMIN_TAB=x; const app=document.getElementById('app'); app.innerHTML=viewAdminDash(); afterAdminDash(); }
+function renderAdminTab(){
+  const el=document.getElementById('adminBody'); if(!el) return;
+  if(ADMIN_TAB==='bookings') el.innerHTML=adminBookings();
+  else if(ADMIN_TAB==='clients') el.innerHTML=adminClients();
+  else if(ADMIN_TAB==='block'){ el.innerHTML=adminBlock(); }
+  else if(ADMIN_TAB==='export') el.innerHTML=adminExport();
+}
+
+/* ----- admin: bookings ----- */
+function adminBookings(){
+  const rows=[...STORE.bookings].sort((a,b)=>(a.date+a.time)<(b.date+b.time)?1:-1);
+  if(!rows.length) return `<div class="panel"><div class="empty-state">${t('noBookings')}</div></div>`;
+  return `<div class="panel"><h2>🗓️ ${t('allBookings')} <span class="chip">${rows.length}</span></h2>
+    <div class="table-scroll"><table class="table">
+      <thead><tr><th>${t('client')}</th><th>${t('date')}</th><th>${t('time')}</th><th>${t('reason')}</th><th>${t('status')}</th><th>${t('actions')}</th></tr></thead>
+      <tbody>${rows.map(b=>`<tr>
+        <td><b>${esc(b.client_name)}</b></td>
+        <td>${b.date}</td><td>${b.time}</td>
+        <td style="max-width:220px">${esc(b.reason)}</td>
+        <td>${b.signature?`<span class="tag tag-signed">${t('signed')}</span>`:`<span class="tag tag-confirmed">${t('confirmed')}</span>`}</td>
+        <td style="white-space:nowrap">
+          ${b.signature?`<button class="btn btn-ghost btn-sm" onclick="viewSignature('${b.id}')">${t('viewSig')}</button> `:''}
+          <button class="btn btn-danger btn-sm" onclick="adminDelBooking('${b.id}')">${t('del')}</button>
+        </td></tr>`).join('')}</tbody>
+    </table></div></div>`;
+}
+function viewSignature(id){
+  const b=STORE.bookings.find(x=>x.id===id); if(!b||!b.signature) return;
+  modal(`<button class="modal-x" onclick="closeModal()">×</button>
+    <h2>${t('viewSig')}</h2><p class="sub">${esc(b.client_name)} · ${b.date} ${b.time}</p>
+    <img src="${b.signature}" style="border:1px solid var(--line);border-radius:12px;background:#fff" />`);
+}
+async function adminDelBooking(id){ if(!confirm(t('delConfirm')))return; await dbDelete('bookings',id); renderAdminTab(); toast('✓','ok'); }
+
+/* ----- admin: clients ----- */
+function adminClients(){
+  const rows=STORE.clients;
+  return `
+  <div class="panel"><h2>➕ ${t('addClient')}</h2>
+    <div class="grid2">
+      <div class="field"><label>${t('username')}</label><input id="ncu"/></div>
+      <div class="field"><label>${t('password')}</label><input id="ncp"/></div>
+      <div class="field"><label>${t('name')}</label><input id="ncn"/></div>
+      <div class="field"><label>${t('clientPhone')}</label><input id="ncph"/></div>
+      <div class="field"><label>${t('clientEmail')}</label><input id="nce"/></div>
+    </div>
+    <button class="btn btn-primary" onclick="addClient()">${t('addClient')}</button>
+  </div>
+  <div class="panel"><h2>👥 ${t('tabClients')} <span class="chip">${rows.length}</span></h2>
+    <div class="table-scroll"><table class="table">
+      <thead><tr><th>${t('name')}</th><th>${t('username')}</th><th>${t('clientPhone')}</th><th>${t('clientEmail')}</th><th>${t('actions')}</th></tr></thead>
+      <tbody>${rows.map(c=>`<tr>
+        <td><b>${esc(c.name)}</b></td><td>${esc(c.username)}</td><td>${esc(c.phone||'')}</td><td>${esc(c.email||'')}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-ghost btn-sm" onclick="editClient('${c.id}')">${t('edit')}</button>
+          <button class="btn btn-danger btn-sm" onclick="delClient('${c.id}')">${t('del')}</button>
+        </td></tr>`).join('')}</tbody>
+    </table></div>
+    ${rows.length?'':`<div class="empty-state">—</div>`}
+  </div>`;
+}
+async function addClient(){
+  const u=val('ncu').trim(),p=val('ncp'),n=val('ncn').trim(),ph=val('ncph').trim(),e=val('nce').trim();
+  if(!u||!p||!n){ toast(t('fillAll'),'err'); return; }
+  if(STORE.clients.some(c=>c.username.toLowerCase()===u.toLowerCase())){ toast(t('userTaken'),'err'); return; }
+  await dbInsert('clients',{id:uid(),username:u,password:p,name:n,phone:ph,email:e,created_at:now()});
+  renderAdminTab(); toast(t('clientAdded'),'ok');
+}
+function editClient(id){
+  const c=STORE.clients.find(x=>x.id===id); if(!c)return;
+  modal(`<button class="modal-x" onclick="closeModal()">×</button>
+    <h2>${t('editClient')}</h2><p class="sub">${esc(c.username)}</p>
+    <div class="field"><label>${t('name')}</label><input id="ecn" value="${esc(c.name)}"/></div>
+    <div class="field"><label>${t('username')}</label><input id="ecu" value="${esc(c.username)}"/></div>
+    <div class="field"><label>${t('clientPhone')}</label><input id="ecph" value="${esc(c.phone||'')}"/></div>
+    <div class="field"><label>${t('clientEmail')}</label><input id="ece" value="${esc(c.email||'')}"/></div>
+    <div class="field"><label>${t('resetPw')} (${t('newPw')})</label><input id="ecp" value="${esc(c.password)}"/></div>
+    <button class="btn btn-primary btn-block" onclick="saveClient('${id}')">${t('save')}</button>`);
+}
+async function saveClient(id){
+  const patch={name:val('ecn').trim(),username:val('ecu').trim(),phone:val('ecph').trim(),email:val('ece').trim(),password:val('ecp')};
+  const dup=STORE.clients.find(c=>c.id!==id && c.username.toLowerCase()===patch.username.toLowerCase());
+  if(dup){ toast(t('userTaken'),'err'); return; }
+  await dbUpdate('clients',id,patch);
+  closeModal(); renderAdminTab(); toast(t('clientAdded'),'ok');
+}
+async function delClient(id){
+  if(!confirm(t('delClientConfirm')))return;
+  await dbDeleteWhere('bookings',b=>b.client_id===id);
+  await dbDelete('clients',id);
+  renderAdminTab(); toast(t('clientDeleted'),'ok');
+}
+
+/* ----- admin: block dates ----- */
+function adminBlock(){
+  const blocks=[...STORE.blocks].sort((a,b)=>(a.date+(a.time||''))<(b.date+(b.time||''))?-1:1);
+  const timeOpts=['<option value="">— '+t('blockWhole')+' —</option>'];
+  for(let h=CONFIG.OPEN_HOUR;h<=CONFIG.CLOSE_HOUR;h++)for(const m of [0,15,30,45]) timeOpts.push(`<option value="${pad(h)}:${pad(m)}">${pad(h)}:${pad(m)}</option>`);
+  return `
+  <div class="panel"><h2>🚫 ${t('blockTitle')}</h2>
+    <div class="grid2">
+      <div class="field"><label>${t('blockDate')}</label><input type="date" id="blkDate" min="${ymd(new Date())}"/></div>
+      <div class="field"><label>${t('blockTimeLbl')}</label><select id="blkTime">${timeOpts.join('')}</select></div>
+    </div>
+    <button class="btn btn-navy" onclick="addBlock()">${t('addBlock')}</button>
+  </div>
+  <div class="panel"><h2>📌 ${t('blockedList')} <span class="chip">${blocks.length}</span></h2>
+    ${blocks.length? `<div class="table-scroll"><table class="table">
+      <thead><tr><th>${t('date')}</th><th>${t('time')}</th><th>${t('actions')}</th></tr></thead>
+      <tbody>${blocks.map(b=>`<tr><td>${b.date}</td><td>${b.time?b.time:('<span class=\"chip\">'+t('whole')+'</span>')}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="delBlock('${b.id}')">${t('unblock')}</button></td></tr>`).join('')}</tbody>
+    </table></div>` : `<div class="empty-state">${t('noBlocks')}</div>`}
+  </div>`;
+}
+async function addBlock(){
+  const d=val('blkDate'), tm=val('blkTime');
+  if(!d){ toast(t('blockDate'),'err'); return; }
+  if(STORE.blocks.some(b=>b.date===d && (b.time||'')===(tm||''))){ toast('✓','ok'); return; }
+  await dbInsert('blocks',{id:uid(),date:d,time:tm||null,created_at:now()});
+  renderAdminTab(); toast(t('blockAdded'),'ok');
+}
+async function delBlock(id){ await dbDelete('blocks',id); renderAdminTab(); toast('✓','ok'); }
+
+/* ----- admin: export ----- */
+function adminExport(){
+  const opts=['<option value="__all__">'+t('exportAll')+'</option>']
+    .concat(STORE.clients.map(c=>`<option value="${c.id}">${esc(c.name)} (${esc(c.username)})</option>`));
+  return `
+  <div class="panel"><h2>📤 ${t('exportTitle')}</h2>
+    <div class="grid2">
+      <div class="field"><label>${t('exportClient')}</label><select id="exClient">${opts.join('')}</select></div>
+      <div></div>
+      <div class="field"><label>${t('fromDate')}</label><input type="date" id="exFrom"/></div>
+      <div class="field"><label>${t('toDate')}</label><input type="date" id="exTo"/></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="exportCSV()">📄 ${t('exportCsv')}</button>
+      <button class="btn btn-primary" onclick="exportReport()">🖨️ ${t('exportReport')}</button>
+    </div>
+    <p class="mini" style="margin-top:12px">${LANG==='zh'?'报告可在浏览器中打印或另存为 PDF，签名图像会一并包含。':'The report opens in a new tab — print it or Save as PDF. Signatures are included as images.'}</p>
+  </div>`;
+}
+function exportFilter(){
+  const cid=val('exClient'), from=val('exFrom'), to=val('exTo');
+  return STORE.bookings.filter(b=>{
+    if(cid!=='__all__' && b.client_id!==cid) return false;
+    if(from && b.date<from) return false;
+    if(to && b.date>to) return false;
+    return true;
+  }).sort((a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1);
+}
+function exportCSV(){
+  const rows=exportFilter();
+  if(!rows.length){ toast(t('noData'),'err'); return; }
+  const head=['Name','Date','Time','Duration(min)','Reason','Status','Signed','Created'];
+  const lines=[head.join(',')].concat(rows.map(b=>[
+    b.client_name,b.date,b.time,b.duration||60,`"${(b.reason||'').replace(/"/g,'""')}"`,
+    b.status,(b.signature?'Yes':'No'),b.created_at
+  ].join(',')));
+  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download=`VCOP-bookings-${ymd(new Date())}.csv`; a.click(); URL.revokeObjectURL(url);
+  toast('CSV ✓','ok');
+}
+function exportReport(){
+  const rows=exportFilter();
+  if(!rows.length){ toast(t('noData'),'err'); return; }
+  const B=CONFIG.BUSINESS;
+  const body=rows.map(b=>`
+    <tr>
+      <td>${esc(b.client_name)}</td><td>${b.date}</td><td>${b.time}</td>
+      <td>${esc(b.reason)}</td><td>${b.signature?t('signed'):t('unsigned')}</td>
+      <td>${b.signature?`<img src="${b.signature}" style="height:60px"/>`:'—'}</td>
+    </tr>`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>VCOP Bookings Report</title>
+    <style>body{font-family:Poppins,Arial,sans-serif;color:#13293D;padding:30px}
+    h1{margin:0}.sub{color:#5B6570;margin:4px 0 20px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{background:#13293D;color:#fff;padding:9px;text-align:left}
+    td{border-bottom:1px solid #e6e9ed;padding:9px;vertical-align:middle}
+    img{border:1px solid #e6e9ed;border-radius:6px;background:#fff}
+    @media print{button{display:none}}</style></head>
+    <body>
+    <h1>VCOP · Appointments Report</h1>
+    <div class="sub">${B.address} · ${B.phone} · Generated ${new Date().toLocaleString()}</div>
+    <button onclick="window.print()" style="margin-bottom:16px;padding:10px 18px;background:#C08A2D;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer">Print / Save as PDF</button>
+    <table><thead><tr><th>Name</th><th>Date</th><th>Time</th><th>Reason</th><th>Status</th><th>Signature</th></tr></thead>
+    <tbody>${body}</tbody></table></body></html>`;
+  const w=window.open('','_blank'); w.document.write(html); w.document.close();
+  toast('Report ✓','ok');
+}
+
+/* ---------- 12. MODAL HELPERS ---------- */
+function modal(inner,cls=''){
+  const root=document.getElementById('modalRoot');
+  root.innerHTML=`<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal ${cls}" style="position:relative">${inner}</div></div>`;
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+function val(id){ const e=document.getElementById(id); return e?e.value:''; }
+
+/* ---------- 13. BOOT ---------- */
+(async function(){ await initStorage(); render(); })();
+</script>
+</body>
+</html>
