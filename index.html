@@ -345,12 +345,15 @@ const I18N = {
     // booking detail
     bkDetail:"Appointment details", date:"Date", time:"Time", reason:"Reason", status:"Status",
     confirmed:"Confirmed", signed:"Signed",
-    sendWa:"Send WhatsApp confirmation", addCal:"Add to my calendar",
+    sendWa:"Send WhatsApp confirmation", resendWa:"Resend WhatsApp confirmation", addCal:"Add to my calendar",
     signNow:"Sign to start session", clear:"Clear", saveSig:"Save signature",
     sigSaved:"Signature saved. Session confirmed.", sigFirst:"Please sign in the box first.",
     close:"Close", signHint:"Sign here with your finger or mouse",
     waSent:"Opening WhatsApp…", calAdded:"Calendar file downloaded.",
     delBooking:"Cancel appointment", delConfirm:"Cancel this appointment? This cannot be undone.",
+    cancelReasonQ:"Reason for cancellation", cancelReasonPh:"e.g. Schedule conflict, need to reschedule…",
+    confirmCancel:"Cancel & notify via WhatsApp", keepBooking:"Keep appointment",
+    enterCancelReason:"Please enter a reason for cancelling.", cancelSent:"Opening WhatsApp to confirm cancellation…",
     // admin
     adminPanel:"Admin panel", tabBookings:"Appointments", tabClients:"Clients", tabBlock:"Block dates", tabExport:"Export",
     allBookings:"All appointments", client:"Client", actions:"Actions",
@@ -405,12 +408,15 @@ const I18N = {
     continueAnyway:"仍然继续", cancelChange:"取消并更改时间",
     bkDetail:"预约详情", date:"日期", time:"时间", reason:"事由", status:"状态",
     confirmed:"已确认", signed:"已签名",
-    sendWa:"发送 WhatsApp 确认", addCal:"加入我的日历",
+    sendWa:"发送 WhatsApp 确认", resendWa:"重新发送 WhatsApp 确认", addCal:"加入我的日历",
     signNow:"签名以开始", clear:"清除", saveSig:"保存签名",
     sigSaved:"签名已保存，行程已确认。", sigFirst:"请先在框内签名。",
     close:"关闭", signHint:"请用手指或鼠标在此签名",
     waSent:"正在打开 WhatsApp……", calAdded:"日历文件已下载。",
     delBooking:"取消预约", delConfirm:"确定取消此预约？此操作无法撤销。",
+    cancelReasonQ:"取消原因", cancelReasonPh:"例如：时间冲突、需要改期……",
+    confirmCancel:"取消并通过 WhatsApp 通知", keepBooking:"保留预约",
+    enterCancelReason:"请填写取消原因。", cancelSent:"正在打开 WhatsApp 确认取消……",
     adminPanel:"管理后台", tabBookings:"预约管理", tabClients:"客户管理", tabBlock:"封锁日期", tabExport:"导出",
     allBookings:"所有预约", client:"客户", actions:"操作",
     addClient:"新增客户", editClient:"编辑客户", name:"姓名", clientPhone:"电话", clientEmail:"电邮",
@@ -860,11 +866,18 @@ async function doBook(reason,time){
   const c=SESSION.client;
   const bk={id:uid(), client_id:c.id, client_name:c.name, date:CAL.selected, time,
     duration:CONFIG.SLOT_MINUTES, reason, signature:null, status:'confirmed', created_at:now()};
+  // auto-open WhatsApp confirmation (kept inside the click gesture, before any await)
+  window.open(waBookingLink(bk),'_blank');
   await dbInsert('bookings',bk);
   document.getElementById('reason').value='';
   renderMyBookings(); mountCalendar('calMount',true);
   toast(t('booked')+' ✓','ok');
-  openBookingDetail(bk.id, true);   // open detail with WhatsApp / calendar / sign
+  openBookingDetail(bk.id, true);   // detail with calendar / signature (WhatsApp already sent)
+}
+function waBookingLink(b){
+  const txt=encodeURIComponent(
+    `✅ VCOP Booking Confirmation\n----------------------\nName: ${b.client_name}\nDate: ${fmtDateLong(b.date)}\nTime: ${b.time}\nReason: ${b.reason}\n\nPlease confirm this appointment. Thank you.`);
+  return `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${txt}`;
 }
 
 /* ----- my bookings list ----- */
@@ -888,9 +901,7 @@ function renderMyBookings(){
 /* ----- booking detail: WhatsApp, calendar, signature ----- */
 function openBookingDetail(id, justBooked){
   const b=STORE.bookings.find(x=>x.id===id); if(!b) return;
-  const waText=encodeURIComponent(
-    `VCOP Booking Confirmation\n----------------------\nName: ${b.client_name}\nDate: ${fmtDateLong(b.date)}\nTime: ${b.time}\nReason: ${b.reason}\n\nPlease confirm this appointment. Thank you.`);
-  const waLink=`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${waText}`;
+  const waLink=waBookingLink(b);
   modal(`
     <button class="modal-x" onclick="closeModal()">×</button>
     <h2>${justBooked?('✅ '+t('booked')):t('bkDetail')}</h2>
@@ -900,7 +911,7 @@ function openBookingDetail(id, justBooked){
       <div class="info-row" style="padding:7px 0"><div><div class="lbl">${t('time')}</div><div class="val">${b.time}</div></div></div>
       <div class="info-row" style="padding:7px 0;border-bottom:none"><div><div class="lbl">${t('reason')}</div><div class="val" style="font-weight:500">${esc(b.reason)}</div></div></div>
     </div>
-    <a class="btn btn-navy btn-block" style="margin-bottom:10px;background:#25D366" href="${waLink}" target="_blank" onclick="toast(t('waSent'))">🟢 ${t('sendWa')}</a>
+    <a class="btn btn-navy btn-block" style="margin-bottom:10px;background:#25D366" href="${waLink}" target="_blank" onclick="toast(t('waSent'))">🟢 ${justBooked?t('resendWa'):t('sendWa')}</a>
     <button class="btn btn-ghost btn-block" style="margin-bottom:10px" onclick="addToCalendar('${b.id}')">📆 ${t('addCal')}</button>
     <div style="border-top:1px solid var(--line);margin:16px 0 14px"></div>
     <div style="font-weight:700;color:var(--navy);margin-bottom:8px">✍️ ${t('signNow')}</div>
@@ -971,11 +982,33 @@ async function saveSig(id){
   closeModal(); renderMyBookings();
   toast(t('sigSaved'),'ok');
 }
-async function cancelBooking(id){
-  if(!confirm(t('delConfirm'))) return;
+function cancelBooking(id){
+  const b=STORE.bookings.find(x=>x.id===id); if(!b) return;
+  modal(`
+    <button class="modal-x" onclick="closeModal()">×</button>
+    <h2>🗑 ${t('delBooking')}</h2>
+    <p class="sub">${fmtDateLong(b.date)} · ${b.time}</p>
+    <div id="cancelErr"></div>
+    <div class="field">
+      <label>${t('cancelReasonQ')}</label>
+      <textarea id="cancelReason" placeholder="${esc(t('cancelReasonPh'))}"></textarea>
+    </div>
+    <button class="btn btn-danger btn-block" style="margin-bottom:10px" onclick="doCancel('${id}')">🟢 ${t('confirmCancel')}</button>
+    <button class="btn btn-ghost btn-block" onclick="openBookingDetail('${id}')">${t('keepBooking')}</button>
+  `);
+  setTimeout(()=>document.getElementById('cancelReason')?.focus(),50);
+}
+async function doCancel(id){
+  const b=STORE.bookings.find(x=>x.id===id); if(!b) return;
+  const reason=document.getElementById('cancelReason').value.trim();
+  if(!reason){ document.getElementById('cancelErr').innerHTML=`<div class="err">${t('enterCancelReason')}</div>`; return; }
+  // open WhatsApp cancellation message (before await so it stays in the user gesture)
+  const waText=encodeURIComponent(
+    `❌ VCOP Appointment Cancellation\n----------------------\nName: ${b.client_name}\nDate: ${fmtDateLong(b.date)}\nTime: ${b.time}\nReason for cancellation: ${reason}\n\nPlease cancel this appointment. Thank you.`);
+  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${waText}`,'_blank');
   await dbDelete('bookings',id);
   closeModal(); renderMyBookings(); mountCalendar('calMount',true);
-  toast('✓','ok');
+  toast(t('cancelSent'),'ok');
 }
 
 /* ---------- 11. ADMIN DASHBOARD ---------- */
